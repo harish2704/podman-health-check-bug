@@ -1,0 +1,53 @@
+services:
+  traefik:
+    image: "traefik:v3.1"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker.allowEmptyServices=true"
+      - "--providers.docker=true"
+      - "--providers.docker.defaultRule=Host(`{{ normalize .Name }}.localhost`)"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.http.address=:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.service=api@internal"
+    security_opt:
+      - label=disable
+    volumes:
+      - "/run/user/1000/podman/podman.sock:/var/run/docker.sock:ro"
+
+  site0:
+    image: php:8.1-apache
+    healthcheck:
+      test: curl --fail http://localhost:80/ || exit 1
+      interval: 1s
+      timeout: 3s
+      retries: 3
+      start_period: 1s
+    volumes:
+      - ./www:/var/www/html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.site0.entrypoints=http"
+
+  site1:
+    extends: site0
+    labels:
+      - "traefik.http.routers.site1.entrypoints=http"
+  site2:
+    extends: site0
+    labels:
+      - "traefik.http.routers.site2.entrypoints=http"
+  # site3:
+  #   extends: site0
+  #   labels:
+  #     - "traefik.http.routers.site3.entrypoints=http"
+  # site4:
+  #   extends: site0
+  #   labels:
+  #     - "traefik.http.routers.site4.entrypoints=http"
+  # site5:
+  #   extends: site0
+  #   labels:
+  #     - "traefik.http.routers.site5.entrypoints=http"
